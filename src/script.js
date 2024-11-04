@@ -19,6 +19,7 @@ import * as THREE from 'three';
 				rayCaster,
 				control,
 				flow,
+				skull,
 				action = ACTION_NONE;
 
 			init();
@@ -67,44 +68,22 @@ import * as THREE from 'three';
 				curve.curveType = 'centripetal';
 				curve.closed = true;
 
-				//const points = curve.getPoints( 50 );
-				// const line = new THREE.LineLoop(
-				// 	new THREE.BufferGeometry().setFromPoints( points ),
-				// 	new THREE.LineBasicMaterial( { color: 0x00ff00 } )
-				// );
-
-				// scene.add( line );
-
-				//
-
-				const light = new THREE.DirectionalLight( 0xffaa33, 3 );
-				light.position.set( - 10, 10, 10 );
-				scene.add( light );
-
-				const light2 = new THREE.AmbientLight( 0x003973, 3 );
-				scene.add( light2 );
-
 				//
 
 				const loader = new FontLoader();
 				loader.load( 'fonts/helvetiker_regular.typeface.json', function ( font ) {
 
-					const geometry = new TextGeometry( 'Sean Pletan Developer Sean Pletan Developer', {
+					const geometry = new TextGeometry( 'Sean Pletan, Developer Sean Pletan, Developer', {
 						font: font,
-						size: 0.213,
-						depth: 0.05,
-						curveSegments: 12,
-						bevelEnabled: true,
-						bevelThickness: 0.02,
-						bevelSize: 0.01,
-						bevelOffset: 0,
-						bevelSegments: 5,
+						size: 0.21,
+						depth: .1,
+						curveSegments: 36
 					} );
 
 					geometry.rotateX( Math.PI );
 
-					const material = new THREE.MeshStandardMaterial( {
-						color: 0x99ffff
+					const material = new THREE.MeshPhysicalMaterial( {
+						color: 0x000000,
 					} );
 
 					const objectToCurve = new THREE.Mesh( geometry, material );
@@ -112,46 +91,37 @@ import * as THREE from 'three';
 					flow = new Flow( objectToCurve );
 					flow.updateCurve( 0, curve );
 					scene.add( flow.object3D );
-
-
-                    new RGBELoader()
-                    .load( 'public/env_map.hdr', function ( texture ) {
-            
-                        texture.mapping = THREE.EquirectangularReflectionMapping;
-            
-                        scene.background = texture;
-                        scene.environment = texture;
-            
-                        render();
-            
-                        // model
-                        const loader = new GLTFLoader();
-                        loader.load('public/skull_fin.glb', async function ( gltf ) {
-            
-                            const model = gltf.scene;
-            
-                            // wait until the model can be added to the scene without blocking due to shader compilation
-            
-                            await renderer.compileAsync( model, camera, scene );
-                            model.rotation.y = 3.14;
-            
-                            scene.add( model );
-            
-                            render();
-                        } );
-                    } );
-                    
-
-
-
-
-
-
-
-
-
-
 				} );
+
+
+
+
+				const rgbeLoader = new RGBELoader()
+				rgbeLoader.load(
+					'env_map.hdr',
+					(environmentMap) =>
+					{
+						environmentMap.mapping = THREE.EquirectangularReflectionMapping
+
+						scene.background = environmentMap
+						scene.environment = environmentMap
+					})
+
+
+				const gltfLoader = new GLTFLoader();
+				gltfLoader.load(
+					'skull_fin.glb', 
+					( gltf ) => 
+						{
+							console.log(gltf)
+							skull = gltf.scene
+							skull.scale.set(3,3,3)
+							skull.position.y = .2
+							skull.rotation.y = Math.PI
+							scene.add(skull)
+
+						} 
+					);
 
 				//
 
@@ -201,31 +171,13 @@ import * as THREE from 'three';
 
 			}
 
+			//const clock = new THREE.Clock()
 			function animate() {
-
-				if ( action === ACTION_SELECT ) {
-
-					rayCaster.setFromCamera( mouse, camera );
-					action = ACTION_NONE;
-					const intersects = rayCaster.intersectObjects( curveHandles, false );
-					if ( intersects.length ) {
-
-						const target = intersects[ 0 ].object;
-						control.attach( target );
-						scene.add( control.getHelper() );
-
-					}
-
+				if ( flow ) 
+				{
+					flow.moveAlongCurve( -0.0005 );
 				}
-
-				if ( flow ) {
-
-					flow.moveAlongCurve( -0.001 );
-
-				}
-
-				render();
-
+				render()
 			}
 
 			function render() {
